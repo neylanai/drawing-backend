@@ -1,4 +1,34 @@
 from fastapi import FastAPI
+import os
+import google.generativeai as genai
+
+app = FastAPI()
+
+# Gemini API key'i ortam değişkeninden al
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/lesson/daily")
+def daily_lesson():
+    model = genai.GenerativeModel("gemini-1.5-flash")
+
+    prompt = """
+    Create a simple drawing lesson for an iPad drawing app.
+    Focus on calm straight lines.
+    Respond in JSON with:
+    lessonId, title, steps (each step has stepId, targetPath, tolerance)
+    """
+
+    response = model.generate_content(prompt)
+
+    return {
+        "raw": response.text
+    }
+
+from fastapi import FastAPI
 
 app = FastAPI()
 
