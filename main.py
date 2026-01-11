@@ -70,8 +70,9 @@ from fastapi import Body
 
 @app.post("/analyze")
 def analyze_drawing(data: dict = Body(...)):
-        if model is None:
+if model is None:
         return {"error": "GEMINI_API_KEY missing on server"}
+
 
     prompt = f"""
     Kullanıcının çizimi:
