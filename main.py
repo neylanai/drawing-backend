@@ -15,7 +15,6 @@ def env_check():
 
 @app.get("/lesson/daily")
 def daily_lesson():
-    # Basit sabit lesson (şimdilik)
     return {
         "lessonId": "lesson_001",
         "title": "Calm Straight Lines",
@@ -32,10 +31,9 @@ def analyze_drawing(data: dict = Body(...)):
         return {"error": "GEMINI_API_KEY missing on server"}
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("models/gemini-pro")
+    model = genai.GenerativeModel("gemini-1.5-flash")
 
-    prompt = f"""
-Kullanıcının çizimi:
+    prompt = f"""Kullanıcının çizimi:
 {data}
 
 Çizimi sakin, net ve teşvik edici şekilde değerlendir.
