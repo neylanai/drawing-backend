@@ -1,12 +1,12 @@
 import os
 import google.generativeai as genai
 from fastapi import FastAPI
-import os
-import google.generativeai as genai
+
 
 app = FastAPI()
 
 api_key = os.getenv("GEMINI_API_KEY")
+
 
 if not api_key:
     print("❌ GEMINI_API_KEY not found")
@@ -14,6 +14,12 @@ if not api_key:
 else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("models/gemini-pro")
+
+
+
+
+  
+
 
 
 @app.get("/health")
