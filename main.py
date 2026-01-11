@@ -48,8 +48,15 @@ from fastapi import FastAPI
 
 
 app = FastAPI()
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("models/gemini-pro")
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    print("❌ GEMINI_API_KEY not found")
+    model = None
+else:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("models/gemini-pro")
+
 
 
 @app.get("/health")
