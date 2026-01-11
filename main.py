@@ -6,8 +6,15 @@ import google.generativeai as genai
 
 app = FastAPI()
 
-# Gemini API key'i ortam değişkeninden al
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    print("❌ GEMINI_API_KEY not found")
+    model = None
+else:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("models/gemini-pro")
+
 
 @app.get("/health")
 def health():
@@ -57,6 +64,9 @@ from fastapi import Body
 
 @app.post("/analyze")
 def analyze_drawing(data: dict = Body(...)):
+        if model is None:
+        return {"error": "GEMINI_API_KEY missing on server"}
+
     prompt = f"""
     Kullanıcının çizimi:
     {data}
