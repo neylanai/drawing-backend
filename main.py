@@ -5,16 +5,6 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-api_key = os.getenv("GEMINI_API_KEY")
-
-
-if not api_key:
-    print("❌ GEMINI_API_KEY not found")
-    model = None
-else:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("models/gemini-pro")
-
 
 
 
