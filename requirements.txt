@@ -1,5 +1,6 @@
 fastapi
-uvicorn
-google-generativeai
+uvicorn[standard]
+google-genai
+
 
 
