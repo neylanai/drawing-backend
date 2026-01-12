@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, Body
-import google.generativeai as genai
+from google import genai
+
 
 app = FastAPI()
 
@@ -24,14 +25,15 @@ def daily_lesson():
         ]
     }
 
+ 
+
 @app.post("/analyze")
 def analyze_drawing(data: dict = Body(...)):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {"error": "GEMINI_API_KEY missing on server"}
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("models/gemini-pro")
+    client = genai.Client(api_key=api_key)
 
     prompt = f"""
 Kullanıcının çizimi:
@@ -39,5 +41,11 @@ Kullanıcının çizimi:
 
 Çizimi sakin, net ve teşvik edici şekilde değerlendir.
 """
-    response = model.generate_content(prompt)
+
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=prompt
+    )
     return {"feedback": response.text}
+
+   
