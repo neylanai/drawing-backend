@@ -1,12 +1,15 @@
 import os
+import json
 import traceback
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
+from typing import Any
 import google.generativeai as genai
 
 app = FastAPI()
 
 
+# ---------- Health / Env ----------
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -18,6 +21,7 @@ def env_check():
     return {"has_key": bool(key), "key_len": len(key or "")}
 
 
+# ---------- Lesson ----------
 @app.get("/lesson/daily")
 def daily_lesson():
     return {
@@ -30,53 +34,70 @@ def daily_lesson():
     }
 
 
-def _get_model():
-    """
-    Güncel Gemini model isimlerini kullan.
-    gemini-1.5-flash Nisan 2025'te kullanımdan kaldırıldı.
-    """
-    # 1) Güncel stabil flash model
-    try:
-        return genai.GenerativeModel("gemini-2.5-flash")
-    except Exception:
-        # 2) Alternatif: 2.0 flash
-        try:
-            return genai.GenerativeModel("gemini-2.0-flash")
-        except Exception:
-            # 3) Son çare: pro modeli
-            return genai.GenerativeModel("gemini-2.5-pro")
-
-
+# ---------- Analyze ----------
 @app.post("/analyze")
-def analyze_drawing(data: dict = Body(...)):
+def analyze_drawing(payload: Any = Body(...)):
+    """
+    Esnek endpoint - birden fazla format kabul eder:
+    - {"paths": ["M10 10 L300 10", ...]}
+    - {"data": ...}
+    - Direkt herhangi bir dict
+    """
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return JSONResponse(
-                status_code=500,
-                content={"error": "GEMINI_API_KEY missing on server"},
+                status_code=500, content={"error": "GEMINI_API_KEY missing on server"}
             )
 
         genai.configure(api_key=api_key)
-        model = _get_model()
 
-        prompt = (
-            "Kullanıcının çizimi:\n"
-            f"{data}\n\n"
-            "Çizimi sakin, net ve teşvik edici şekilde değerlendir.\n"
-            "Kısa, net ve teşvik edici bir geri bildirim ver. Maddeler halinde yazabilirsin."
-        )
+        # ✅ Güncel model adı (Ocak 2026)
+        model = genai.GenerativeModel("gemini-2.5-flash")
+
+        # Payload'ı string'e çevir (ne gelirse gelsin)
+        if isinstance(payload, dict):
+            paths_data = payload.get("paths", payload)
+        else:
+            paths_data = payload
+
+        prompt = f"""
+Sen bir iPad çizim uygulaması için çizim koçusun.
+Kullanıcının çizimi (SVG path listesi):
+{paths_data}
+
+SADECE geçerli JSON döndür. Ekstra açıklama, markdown, backtick YOK.
+Şu şemaya tam uy:
+{{
+  "score": 0-100,
+  "feedback_text": "kısa, sakin, teşvik edici yorum",
+  "tips": ["1-3 kısa ipucu"],
+  "next_step": "bir sonraki küçük görev"
+}}
+"""
 
         resp = model.generate_content(prompt)
-        text = getattr(resp, "text", None)
+        text = getattr(resp, "text", "") or ""
 
-        if not text:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Empty response from Gemini", "raw": str(resp)},
-            )
+        # Model bazen JSON'u ``` içinde döndürebilir. Temizleyelim:
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            cleaned = cleaned.replace("json", "", 1).strip()
 
-        return {"feedback": text}
+        # JSON parse etmeyi dene:
+        try:
+            data = json.loads(cleaned)
+        except Exception:
+            # parse edemezsek yine de güvenli bir JSON dönelim
+            data = {
+                "score": 70,
+                "feedback_text": text.strip()[:800],
+                "tips": ["Çizgiyi daha sabit hızla çekmeyi dene."],
+                "next_step": "Aynı çizgiyi 3 kez daha çiz.",
+            }
+
+        return JSONResponse(status_code=200, content=data)
 
     except Exception as e:
         return JSONResponse(
