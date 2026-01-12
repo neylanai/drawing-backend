@@ -1,9 +1,7 @@
 import os
 import traceback
-
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
-
 import google.generativeai as genai
 
 app = FastAPI()
@@ -34,15 +32,19 @@ def daily_lesson():
 
 def _get_model():
     """
-    google.generativeai (v1beta) bazı ortamlarda model isimleri konusunda hassas.
-    Önce flash dene, 404 vs olursa pro'ya düş.
+    Güncel Gemini model isimlerini kullan.
+    gemini-1.5-flash Nisan 2025'te kullanımdan kaldırıldı.
     """
-    # 1) En çok istenen
+    # 1) Güncel stabil flash model
     try:
-        return genai.GenerativeModel("gemini-1.5-flash")
+        return genai.GenerativeModel("gemini-2.5-flash")
     except Exception:
-        # 2) Daha “garanti” alternatif
-        return genai.GenerativeModel("gemini-1.5-pro")
+        # 2) Alternatif: 2.0 flash
+        try:
+            return genai.GenerativeModel("gemini-2.0-flash")
+        except Exception:
+            # 3) Son çare: pro modeli
+            return genai.GenerativeModel("gemini-2.5-pro")
 
 
 @app.post("/analyze")
@@ -56,7 +58,6 @@ def analyze_drawing(data: dict = Body(...)):
             )
 
         genai.configure(api_key=api_key)
-
         model = _get_model()
 
         prompt = (
@@ -67,8 +68,8 @@ def analyze_drawing(data: dict = Body(...)):
         )
 
         resp = model.generate_content(prompt)
-
         text = getattr(resp, "text", None)
+
         if not text:
             return JSONResponse(
                 status_code=500,
