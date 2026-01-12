@@ -32,23 +32,38 @@ def daily_lesson():
     }
 
 
+def _get_model():
+    """
+    google.generativeai (v1beta) bazı ortamlarda model isimleri konusunda hassas.
+    Önce flash dene, 404 vs olursa pro'ya düş.
+    """
+    # 1) En çok istenen
+    try:
+        return genai.GenerativeModel("gemini-1.5-flash")
+    except Exception:
+        # 2) Daha “garanti” alternatif
+        return genai.GenerativeModel("gemini-1.5-pro")
+
+
 @app.post("/analyze")
 def analyze_drawing(data: dict = Body(...)):
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY missing on server"})
+            return JSONResponse(
+                status_code=500,
+                content={"error": "GEMINI_API_KEY missing on server"},
+            )
 
-        # Gemini setup
         genai.configure(api_key=api_key)
 
-        # Model (en yaygın çalışan seçim)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = _get_model()
 
         prompt = (
             "Kullanıcının çizimi:\n"
             f"{data}\n\n"
-            "Çizimi sakin, net ve teşvik edici şekilde değerlendir."
+            "Çizimi sakin, net ve teşvik edici şekilde değerlendir.\n"
+            "Kısa, net ve teşvik edici bir geri bildirim ver. Maddeler halinde yazabilirsin."
         )
 
         resp = model.generate_content(prompt)
@@ -68,6 +83,6 @@ def analyze_drawing(data: dict = Body(...)):
             content={
                 "error": str(e),
                 "type": e.__class__.__name__,
-                "trace": traceback.format_exc()[-2000:],  # son kısım
+                "trace": traceback.format_exc()[-2000:],
             },
         )
