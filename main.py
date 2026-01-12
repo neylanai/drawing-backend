@@ -20,8 +20,8 @@ def daily_lesson():
         "title": "Calm Straight Lines",
         "steps": [
             {"stepId": "step_1", "targetPath": "M10 10 L300 10", "tolerance": 6},
-            {"stepId": "step_2", "targetPath": "M10 30 L300 30", "tolerance": 6},
-        ],
+            {"stepId": "step_2", "targetPath": "M10 30 L300 30", "tolerance": 6}
+        ]
     }
 
 @app.post("/analyze")
@@ -31,9 +31,10 @@ def analyze_drawing(data: dict = Body(...)):
         return {"error": "GEMINI_API_KEY missing on server"}
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("models/gemini-pro")
 
-    prompt = f"""Kullanıcının çizimi:
+    prompt = f"""
+Kullanıcının çizimi:
 {data}
 
 Çizimi sakin, net ve teşvik edici şekilde değerlendir.
