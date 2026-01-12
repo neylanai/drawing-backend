@@ -1,9 +1,8 @@
 import os
 import json
 import traceback
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from typing import Any
 import google.generativeai as genai
 
 app = FastAPI()
@@ -36,14 +35,18 @@ def daily_lesson():
 
 # ---------- Analyze ----------
 @app.post("/analyze")
-def analyze_drawing(payload: Any = Body(...)):
+async def analyze_drawing(request: Request):
     """
-    Esnek endpoint - birden fazla format kabul eder:
-    - {"paths": ["M10 10 L300 10", ...]}
-    - {"data": ...}
-    - Direkt herhangi bir dict
+    Süper esnek endpoint - her türlü input kabul eder.
+    Body boş bile olsa çalışır.
     """
     try:
+        # Body'yi oku (boş olabilir)
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return JSONResponse(
@@ -55,11 +58,11 @@ def analyze_drawing(payload: Any = Body(...)):
         # ✅ Güncel model adı (Ocak 2026)
         model = genai.GenerativeModel("gemini-2.5-flash")
 
-        # Payload'ı string'e çevir (ne gelirse gelsin)
+        # Payload'dan paths'i al veya tüm payload'ı kullan
         if isinstance(payload, dict):
-            paths_data = payload.get("paths", payload)
+            paths_data = payload.get("paths", payload) if payload else "boş çizim"
         else:
-            paths_data = payload
+            paths_data = payload or "boş çizim"
 
         prompt = f"""
 Sen bir iPad çizim uygulaması için çizim koçusun.
@@ -89,7 +92,6 @@ SADECE geçerli JSON döndür. Ekstra açıklama, markdown, backtick YOK.
         try:
             data = json.loads(cleaned)
         except Exception:
-            # parse edemezsek yine de güvenli bir JSON dönelim
             data = {
                 "score": 70,
                 "feedback_text": text.strip()[:800],
